@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competitor Ad Spend & ROI Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .dashboard-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .dashboard-title {
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #555;
+        }
+
+        select, input {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.15);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
+
+        .card-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8ecff 100%);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+        }
+
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        .competitor-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .competitor-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8ecff 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .competitor-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
+        }
+
+        .competitor-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .competitor-logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .competitor-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .competitor-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .competitor-category {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .competitor-metrics {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+
+        .spend-amount {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .roi-badge {
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: white;
+        }
+
+        .roi-high { background: #4CAF50; }
+        .roi-medium { background: #FF9800; }
+        .roi-low { background: #F44336; }
+
+        .wide-card {
+            grid-column: 1 / -1;
+        }
+
+        .performance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .performance-table th,
+        .performance-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .performance-table th {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8ecff 100%);
+            font-weight: 600;
+            color: #333;
+        }
+
+        .performance-table tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .trend-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .trend-up {
+            background: rgba(76, 175, 80, 0.1);
+            color: #4CAF50;
+        }
+
+        .trend-down {
+            background: rgba(244, 67, 54, 0.1);
+            color: #F44336;
+        }
+
+        .data-source-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .data-source-info h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .data-source-info ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .data-source-info li {
+            padding: 3px 0;
+            color: #666;
+        }
+
+        .data-source-info li::before {
+            content: "📊 ";
+            margin-right: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+                padding: 20px 15px;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .filter-controls {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <div class="header-content">
+            <h1 class="dashboard-title">Competitor Ad Intelligence</h1>
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <label for="timeRange">Time Period</label>
+                    <select id="timeRange" onchange="updateDashboard()">
+                        <option value="30">Last 30 Days</option>
+                        <option value="90" selected>Last 90 Days</option>
+                        <option value="180">Last 6 Months</option>
+                        <option value="365">Last Year</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="industry">Industry</label>
+                    <select id="industry" onchange="updateDashboard()">
+                        <option value="all" selected>All Industries</option>
+                        <option value="ecommerce">E-commerce</option>
+                        <option value="saas">SaaS</option>
+                        <option value="finance">Finance</option>
+                        <option value="health">Healthcare</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="platform">Platform</label>
+                    <select id="platform" onchange="updateDashboard()">
+                        <option value="all" selected>All Platforms</option>
+                        <option value="facebook">Facebook/Meta</option>
+                        <option value="google">Google Ads</option>
+                        <option value="linkedin">LinkedIn</option>
+                        <option value="twitter">Twitter</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-container">
+        <!-- Key Metrics Overview -->
+        <div class="card wide-card">
+            <h2 class="card-title">🎯 Market Intelligence Overview</h2>
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-value" id="totalSpend">$2.4M</div>
+                    <div class="metric-label">Total Market Spend</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="avgROI">324%</div>
+                    <div class="metric-label">Average ROI</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="competitorsTracked">47</div>
+                    <div class="metric-label">Competitors Tracked</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="activeCampaigns">1,284</div>
+                    <div class="metric-label">Active Campaigns</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="marketShare">12.8%</div>
+                    <div class="metric-label">Your Market Share</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="opportunityScore">87</div>
+                    <div class="metric-label">Opportunity Score</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Spend vs ROI Analysis -->
+        <div class="card">
+            <h2 class="card-title">💰 Ad Spend vs ROI Analysis</h2>
+            <div class="chart-container">
+                <canvas id="spendRoiChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Market Share Breakdown -->
+        <div class="card">
+            <h2 class="card-title">📊 Market Share Distribution</h2>
+            <div class="chart-container">
+                <canvas id="marketShareChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Top Competitors List -->
+        <div class="card">
+            <h2 class="card-title">🏆 Top Performing Competitors</h2>
+            <div class="competitor-list" id="competitorList">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Platform Performance -->
+        <div class="card">
+            <h2 class="card-title">📱 Platform Performance</h2>
+            <div class="chart-container">
+                <canvas id="platformChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Detailed Performance Table -->
+        <div class="card wide-card">
+            <h2 class="card-title">📈 Detailed Competitor Analysis</h2>
+            <table class="performance-table">
+                <thead>
+                    <tr>
+                        <th>Competitor</th>
+                        <th>Est. Monthly Spend</th>
+                        <th>CTR</th>
+                        <th>Est. ROI</th>
+                        <th>Active Campaigns</th>
+                        <th>Primary Platforms</th>
+                        <th>Trend</th>
+                    </tr>
+                </thead>
+                <tbody id="performanceTableBody">
+                    <!-- Will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Data Sources & Methodology -->
+        <div class="card wide-card">
+            <h2 class="card-title">🔍 Data Sources & Methodology</h2>
+            <div class="data-source-info">
+                <h4>Intelligence Gathering Sources:</h4>
+                <ul>
+                    <li>SEMRush Advertising Research - Paid search data and competitor keywords</li>
+                    <li>Facebook Ad Library - Public ad creative and spend estimates</li>
+                    <li>SimilarWeb Traffic Analytics - Website traffic and conversion data</li>
+                    <li>Google Ads Transparency Center - Google ad spend and performance</li>
+                    <li>LinkedIn Ad Analytics - B2B advertising insights</li>
+                    <li>Native platform APIs - Real-time campaign data where available</li>
+                </ul>
+                <p style="margin-top: 15px; color: #666; font-size: 0.9em;">
+                    <strong>Methodology:</strong> Data is aggregated from multiple sources using automated scraping and API integrations. 
+                    Spend estimates are calculated using traffic volume, CPC benchmarks, and disclosed advertising data. 
+                    ROI calculations include estimated conversion rates based on industry benchmarks and traffic quality metrics.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data - in a real implementation, this would come from your data sources
+        const competitorData = [
+            { name: "TechCorp", category: "SaaS", spend: 285000, roi: 420, ctr: 3.2, campaigns: 24, platforms: ["Google", "LinkedIn"], trend: "up", logo: "TC" },
+            { name: "InnovatePlus", category: "E-commerce", spend: 195000, roi: 380, ctr: 2.8, campaigns: 18, platforms: ["Facebook", "Google"], trend: "up", logo: "IP" },
+            { name: "GlobalTech", category: "Enterprise", spend: 320000, roi: 290, ctr: 2.1, campaigns: 31, platforms: ["LinkedIn", "Twitter"], trend: "down", logo: "GT" },
+            { name: "StartupX", category: "SaaS", spend: 125000, roi: 450, ctr: 4.1, campaigns: 12, platforms: ["Facebook", "Google"], trend: "up", logo: "SX" },
+            { name: "MegaCorp", category: "Finance", spend: 580000, roi: 220, ctr: 1.8, campaigns: 45, platforms: ["Google", "LinkedIn", "Facebook"], trend: "down", logo: "MC" },
+            { name: "AgileFlow", category: "SaaS", spend: 95000, roi: 520, ctr: 3.8, campaigns: 8, platforms: ["LinkedIn", "Google"], trend: "up", logo: "AF" },
+            { name: "RetailGiant", category: "E-commerce", spend: 450000, roi: 310, ctr: 2.4, campaigns: 38, platforms: ["Facebook", "Google", "Amazon"], trend: "up", logo: "RG" },
+            { name: "HealthTech", category: "Healthcare", spend: 175000, roi: 340, ctr: 2.9, campaigns: 15, platforms: ["Google", "Facebook"], trend: "up", logo: "HT" }
+        ];
+
+        let charts = {};
+
+        function initializeCharts() {
+            // Spend vs ROI Scatter Chart
+            const spendRoiCtx = document.getElementById('spendRoiChart').getContext('2d');
+            charts.spendRoi = new Chart(spendRoiCtx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Competitors',
+                        data: competitorData.map(comp => ({ x: comp.spend / 1000, y: comp.roi })),
+                        backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2,
+                        pointRadius: 8,
+                        pointHoverRadius: 12
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const comp = competitorData[context.dataIndex];
+                                    return `${comp.name}: $${context.parsed.x}K spend, ${context.parsed.y}% ROI`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Monthly Ad Spend (K$)' },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Estimated ROI (%)' },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        }
+                    }
+                }
+            });
+
+            // Market Share Pie Chart
+            const marketShareCtx = document.getElementById('marketShareChart').getContext('2d');
+            const totalSpend = competitorData.reduce((sum, comp) => sum + comp.spend, 0);
+            charts.marketShare = new Chart(marketShareCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: competitorData.slice(0, 6).map(comp => comp.name),
+                    datasets: [{
+                        data: competitorData.slice(0, 6).map(comp => ((comp.spend / totalSpend) * 100).toFixed(1)),
+                        backgroundColor: [
+                            '#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 20 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.parsed}% market share`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Platform Performance Bar Chart
+            const platformCtx = document.getElementById('platformChart').getContext('2d');
+            const platformData = {
+                'Google': { spend: 850000, roi: 315 },
+                'Facebook': { spend: 720000, roi: 380 },
+                'LinkedIn': { spend: 420000, roi: 290 },
+                'Twitter': { spend: 180000, roi: 250 },
+                'Amazon': { spend: 230000, roi: 340 }
+            };
+
+            charts.platform = new Chart(platformCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(platformData),
+                    datasets: [{
+                        label: 'Total Spend ($K)',
+                        data: Object.values(platformData).map(p => p.spend / 1000),
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Average ROI (%)',
+                        data: Object.values(platformData).map(p => p.roi),
+                        backgroundColor: 'rgba(118, 75, 162, 0.8)',
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: 'Spend ($K)' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: { display: true, text: 'ROI (%)' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function populateCompetitorList() {
+            const competitorList = document.getElementById('competitorList');
+            const sortedCompetitors = [...competitorData].sort((a, b) => b.roi - a.roi).slice(0, 5);
+            
+            competitorList.innerHTML = sortedCompetitors.map(comp => `
+                <div class="competitor-item">
+                    <div class="competitor-info">
+                        <div class="competitor-logo">${comp.logo}</div>
+                        <div class="competitor-details">
+                            <div class="competitor-name">${comp.name}</div>
+                            <div class="competitor-category">${comp.category}</div>
+                        </div>
+                    </div>
+                    <div class="competitor-metrics">
+                        <div class="spend-amount">$${(comp.spend / 1000).toFixed(0)}K</div>
+                        <div class="roi-badge roi-${comp.roi > 400 ? 'high' : comp.roi > 300 ? 'medium' : 'low'}">
+                            ${comp.roi}% ROI
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function populatePerformanceTable() {
+            const tableBody = document.getElementById('performanceTableBody');
+            
+            tableBody.innerHTML = competitorData.map(comp => `
+                <tr>
+                    <td><strong>${comp.name}</strong></td>
+                    <td>$${(comp.spend / 1000).toFixed(0)}K</td>
+                    <td>${comp.ctr}%</td>
+                    <td>${comp.roi}%</td>
+                    <td>${comp.campaigns}</td>
+                    <td>${comp.platforms.join(', ')}</td>
+                    <td>
+                        <span class="trend-indicator trend-${comp.trend}">
+                            ${comp.trend === 'up' ? '📈' : '📉'} ${comp.trend === 'up' ? '+12%' : '-8%'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateMetrics() {
+            const totalSpend = competitorData.reduce((sum, comp) => sum + comp.spend, 0);
+            const avgROI = Math.round(competitorData.reduce((sum, comp) => sum + comp.roi, 0) / competitorData.length);
+            const totalCampaigns = competitorData.reduce((sum, comp) => sum + comp.campaigns, 0);
+            
+            document.getElementById('totalSpend').textContent = `$${(totalSpend / 1000000).toFixed(1)}M`;
+            document.getElementById('avgROI').textContent = `${avgROI}%`;
+            document.getElementById('activeCampaigns').textContent = totalCampaigns.toLocaleString();
+        }
+
+        function updateDashboard() {
+            // In a real implementation, this would fetch new data based on filters
+            console.log('Dashboard updated with new filters');
+            
+            // Simulate data update with slight variations
+            competitorData.forEach(comp => {
+                comp.spend = comp.spend * (0.9 + Math.random() * 0.2);
+                comp.roi = Math.round(comp.roi * (0.95 + Math.random() * 0.1));
+            });
+            
+            // Update all components
+            updateMetrics();
+            populateCompetitorList();
+            populatePerformanceTable();
+            
+            // Update charts
+            Object.values(charts).forEach(chart => chart.update());
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            populateCompetitorList();
+            populatePerformanceTable();
+            updateMetrics();
+        });
+    </script>
+</body>
+</html>
